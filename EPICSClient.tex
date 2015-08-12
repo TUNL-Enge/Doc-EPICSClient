@@ -1,0 +1,349 @@
+% Created 2015-08-12 Wed 12:04
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{fixltx2e}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{marvosym}
+\usepackage{wasysym}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\tolerance=1000
+\usepackage{fullpage}
+\usepackage{times}
+\date{2015-07-20}
+\title{EPICS Client Install}
+\hypersetup{
+  pdfkeywords={},
+  pdfsubject={},
+  pdfcreator={Emacs 24.3.1 (Org mode 8.2.4)}}
+\begin{document}
+
+\maketitle
+
+\section{Install notes}
+\label{sec-1}
+This assumes you have a clean install of Linux Mint (I'm using 17.1 KDE)
+
+\subsection{Preparation}
+\label{sec-1-1}
+\begin{itemize}
+\item Install a few things
+\begin{verbatim}
+sudo apt-get install ssh emacs build-essential libreadline-dev \
+		     mesa-common-dev libgl1-mesa-dev python-dev
+\end{verbatim}
+\end{itemize}
+\subsection{EPICS Base}
+\label{sec-1-2}
+\begin{itemize}
+\item Boot into Mint
+\item Log in as user
+\item Make a new user: enge, if you don't have it
+\begin{verbatim}
+sudo adduser --home /home/enge enge
+\end{verbatim}
+\item Add that user to the sudoers list
+\begin{verbatim}
+sudo adduser enge sudo
+\end{verbatim}
+\item Log out and then in as that user
+\item Make the file structure (I actually put these in a separate
+partition and linked to them from here)
+\begin{verbatim}
+mkdir bin
+mkdir project
+mkdir GUI
+\end{verbatim}
+\item Download and untar the EPICS base package
+\begin{verbatim}
+wget http://www.aps.anl.gov/epics/download/base/base-3.15.2.tar.gz 
+tar -xzvf base-3.15.2.tar.gz
+ln -s base-3.15.2 base
+\end{verbatim}
+\item Paste the following into .bashrc
+\begin{verbatim}
+######################################################################
+##  EPICS
+######################################################################
+
+## Base
+export EPICS_ROOT=/home/enge
+export EPICS_BASE=${EPICS_ROOT}/base/
+export EPICS_HOST_ARCH=`${EPICS_BASE}/startup/EpicsHostArch`
+export EPICS_BASE_BIN=${EPICS_BASE}/bin/${EPICS_HOST_ARCH}
+export EPICS_BASE_LIB=${EPICS_BASE}/lib/${EPICS_HOST_ARCH}
+if [ "" = "${LD_LIBRARY_PATH}" ]; then
+    export LD_LIBRARY_PATH=${EPICS_BASE_LIB}
+else
+    export LD_LIBRARY_PATH=${EPICS_BASE_LIB}:${LD_LIBRARY_PATH}
+fi
+export PATH=${PATH}:${EPICS_BASE_BIN}
+
+## EPICS Extensions
+export EPICS_EXT=${EPICS_ROOT}/extensions
+export EPICS_EXT_BIN=${EPICS_EXT}/bin/${EPICS_HOST_ARCH}
+export EPICS_EXT_LIB=${EPICS_EXT}/lib/${EPICS_HOST_ARCH}
+if [ "" = "${LD_LIBRARY_PATH}" ]; then
+    export LD_LIBRARY_PATH=${EPICS_EXT_LIB}
+else
+    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${EPICS_BASE_LIB}
+fi
+export EPICS_SYNAPPS_BASE=${EPICS_ROOT}/synApps
+export EPICS_SYNAPPS_BIN=${EPICS_SYNAPPS_BASE}/support/utils
+export PATH=${PATH}:${EPICS_EXT_BIN}:${EPICS_SYNAPPS_BIN}
+\end{verbatim}
+\item Load it
+\begin{verbatim}
+source ~/.bashrc
+\end{verbatim}
+\item Compile EPICS
+\begin{verbatim}
+cd base
+make -j2
+\end{verbatim}
+\item Buy and drink some coffee
+\item Once finished, check that it works
+\begin{verbatim}
+softIoc
+\end{verbatim}
+\item Epics should have started. Now run the IOC
+\begin{verbatim}
+iocInit
+\end{verbatim}
+\item You should see something that looks like
+\begin{verbatim}
+epics> iocInit  
+Starting iocInit
+############################################################################
+## EPICS R3.15.2 $Date: Thu 2015-05-14 14:09:28 +0200$
+## EPICS Base built Jul 17 2015
+############################################################################
+iocRun: All initialization complete
+epics> exit
+\end{verbatim}
+\end{itemize}
+\subsection{synApps (needed for streamdevice and serial connections)}
+\label{sec-1-3}
+\begin{itemize}
+\item Get the extensions and msi first
+\begin{verbatim}
+cd ~
+wget http://www.aps.anl.gov/epics/download/extensions/extensionsTop_20120904.tar.gz
+tar -xzvf extensionsTop_20120904.tar.gz
+wget http://www.aps.anl.gov/epics/download/extensions/msi1-7.tar.gz
+cd extensions/src
+tar -xzvf ../../msi1-7.tar.gz
+cd msi1-7
+make
+\end{verbatim}
+\item Install re2c (I don't know what it's for)
+\begin{verbatim}
+sudo apt-get install re2c
+\end{verbatim}
+\item Download and unzip synApps
+\begin{verbatim}
+cd ~
+wget http://www.aps.anl.gov/bcda/synApps/tar/synApps_5_8.tar.gz
+tar -xzvf synApps_5_8.tar.gz
+ln -s synApps_5_8 synApps
+\end{verbatim}
+\item We don't need all the junk included
+\begin{verbatim}
+cd synApps/support/configure
+emacs RELEASE
+\end{verbatim}
+\item Edit the SUPPORT line
+\begin{verbatim}
+SUPPORT=/home/enge/synApps/support
+\end{verbatim}
+\item Edit EPICS$_{\text{BASE}}$
+\begin{verbatim}
+EPICS_BASE=/home/enge/base
+\end{verbatim}
+\item Comment out (with a '\verb~#~') the modules we don't want
+\begin{itemize}
+\item \verb~ALLEN_BRADLEY~
+\item \verb~AREA_DETECTOR~
+\item \verb~ADCORE~
+\item \verb~ADBINARIES~
+\item \verb~CAPUTRECORDER~
+\item \verb~CAMAC~
+\item \verb~DAC128V~
+\item \verb~DXP~
+\item \verb~IP~
+\item \verb~IP330~
+\item \verb~IPUNIDIG~
+\item \verb~OPTICS~
+\item \verb~QUADEM~
+\item \verb~SOFTGLUE~
+\item \verb~VME~
+\end{itemize}
+\item Prepare the makefile
+\begin{verbatim}
+cd ~/synApps/support
+make release
+\end{verbatim}
+\item Compile!
+\begin{verbatim}
+make -j2 rebuild
+\end{verbatim}
+\end{itemize}
+\subsection{Tidy up}
+\label{sec-1-4}
+\begin{itemize}
+\item Make a folder to keep zip files
+\begin{verbatim}
+cd ~
+mkdir Downloads
+mv *.tar.gz Downloads
+\end{verbatim}
+\end{itemize}
+\subsection{Qt GUI stuff}
+\label{sec-1-5}
+I've quite liked using Qt as a GUI. So far, \texttt{EpicsQt} has worked
+quite nicely, but I haven't tried to do anything complicated
+yet. In the mean time, we should also install \href{http://epics.web.psi.ch/software/caqtdm/}{CaQtDM}.
+
+\begin{enumerate}
+\item Qt Install
+\label{sec-1-5-1}
+\begin{itemize}
+\item Download Qt (includes Qt Creator) from the \href{http://www.qt.io/}{official website}
+\item Make sure you look for the open source one
+\item This should have saved a file
+      \verb~qt-unified-linux-x64-2.0.2-1-online.run~ in my case.
+\item Make a folder to put this in
+\begin{verbatim}
+sudo mkdir /opt/Qt
+\end{verbatim}
+\item Install Qt in the folder you just made
+\begin{verbatim}
+chmod 755 qt-unified-linux-x64-2.0.2-1-online.run
+./qt-unified-linux-x64-2.0.2-1-online.run
+\end{verbatim}
+\item This should install Qt. Check
+\begin{verbatim}
+qtcreator &
+\end{verbatim}
+\item Now add the following in .bashrc
+\begin{verbatim}
+#### Qt
+export PATH=/opt/Qt/5.5/gcc_64/bin:/opt/Qt/Tools/QtCreator/bin:${PATH}
+export QWT_ROOT=/usr/local/qwt-6.1.2
+export QWT_INCLUDE_PATH=/usr/local/qwt-6.1.2/include/
+export LD_LIBRARY_PATH=/usr/local/qwt-6.1.2/lib/:/opt/Qt/5.5/gcc_64/lib:${LD_LIBRARY_PATH}
+\end{verbatim}
+\item Also install QWT
+\item Download from \url{http://qwt.sourceforge.net/}
+\begin{verbatim}
+source ~/.bashrc
+cd ~/Downloads
+tar -xjvf qwt-6.1.2.tar.bz2
+cd qwt-6.1.2
+qmake
+make
+sudo make install
+\end{verbatim}
+\end{itemize}
+\item CaQtDM Install
+\label{sec-1-5-2}
+\begin{itemize}
+\item \url{https://github.com/caqtdm/caqtdm/archive/V3.9.4.tar.gz}
+\item Download:
+\begin{verbatim}
+cd ~/GUI
+wget https://github.com/caqtdm/caqtdm/archive/V3.9.4.tar.gz
+tar -xzvf V3.9.4.tar.gz
+mv V3.9.4.tar.gz ~/Downloads/caQtDM_V3.9.4.tar.gz
+\end{verbatim}
+\item caQtDM doesn't find variables on its own, so make sure
+      \verb~caQtDM_Env~ has the right variables
+\begin{verbatim}
+if [ -z "$QTHOME" ];           then export   QTHOME=/opt/Qt;
+fi
+if [ -z "$QWTHOME" ];          then export   QWTHOME=/usr/local/qwt-6.1.2;
+fi
+if [ -z "$QWTINCLUDE" ];       then export   QWTINCLUDE=${QWTHOME}/include;
+fi
+if [ -z "$QWTLIB" ];           then export   QWTLIB=${QWTHOME}/lib;
+fi
+if [ -z "$EPICS_BASE" ];       then export   EPICS_BASE=/home/enge/base;
+fi
+if [ -z "$EPICSINCLUDE" ];     then export   EPICSINCLUDE=${EPICS_BASE}/include;
+fi
+if [ -z "$EPICSLIB" ];         then  export  EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH;
+fi
+if [ -z "$EPICSEXTENSIONS" ];  then  export  EPICSEXTENSIONS=/home/enge/extensions;
+fi
+if [ -z "$QTCONTROLS_LIBS" ];  then export  QTCONTROLS_LIBS=`pwd`/caQtDM_Binaries;
+fi
+if [ -z "$CAQTDM_COLLECT" ];  then export  CAQTDM_COLLECT=`pwd`/caQtDM_Binaries;
+fi
+\end{verbatim}
+\item Make sure python is defined as the correct version (I had to put
+2.7) in \verb~caQtDM_Env~
+\item Fix compilerSpecific.h
+\begin{verbatim}
+ln -s /home/enge/base/include/compiler/gcc/compilerSpecific.h /home/enge/base/include/
+\end{verbatim}
+\item Run the build script
+\begin{verbatim}
+./caQtDM_BuildAll
+\end{verbatim}
+\end{itemize}
+\item EpicsQt Install
+\label{sec-1-5-3}
+\begin{itemize}
+\item Download from \texttt{www.sourceforge.net/project/epicsqt} (I got version 3.1.0)
+\item Extract
+\begin{verbatim}
+mv epicsqt-3.1.0-src.tar.gz ~/GUI
+cd ~/GUI
+tar -xzvf epicsqt-3.1.0-src.tar.gz
+mv 3.1.0 EpicsQt-3.1.0
+\end{verbatim}
+\item Add some things to \verb~.bashrc~
+\begin{verbatim}
+## QtEpics
+export QE_EPICS_BASE=${EPICS_BASE}
+export EPICSQT_ROOT=${EPICS_ROOT}/GUI/EpicsQt-3.1.0
+export EPICSCAQTDM_ROOT=${EPICS_ROOT}/GUI/caqtdm-3.9.4
+export PATH=${PATH}:${EPICSQT_ROOT}/applications/QEGuiApp/bin:${EPICSCAQTDM_ROOT}/caQtDM_Binaries
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${EPICSQT_ROOT}/framework/designer:${EPICS_BASE}/lib/${EPICS}
+export QT_PLUGIN_PATH=${EPICSQT_ROOT}/framework:${EPICSCAQTDM_ROOT}/caQtDM_Binaries
+\end{verbatim}
+\item and source: \verb,source ~/.bashrc,
+\item For some reason, I found it easiest to do the rest of this
+compilation using Qt Creator. So load that now
+\begin{verbatim}
+qtcreator &
+\end{verbatim}
+\item Make sure the correct version of Qt is being used. On a fresh
+install this should be easy enough, but you'll need to be
+careful if there are multiple versions of Qt on your computer.
+\item Load the \verb~epicsqt.pro~ file in the EpicsQt base directory
+\item Uncheck "shadow build" in "Projects"
+\item Add multi-processor building if you like by adding '-j2' to the
+make arguments
+\item Hit the "build" button!\\
+      There will be lots of warnings but eventually it will
+finish. Hopefully without any errors\ldots{}
+\item Close and reopen Qt Creator (from the command line)
+\item Open a test GUI and make sure it works
+\begin{itemize}
+\item Open a form
+\item Tools -> Form Editor -> About Qt Designer Plugins
+\item Scroll down to make sure the EpicsQt plugins are loaded
+\end{itemize}
+\end{itemize}
+\end{enumerate}
+% Emacs 24.3.1 (Org mode 8.2.4)
+\end{document}
