@@ -157,7 +157,6 @@ EPICS_BASE=/home/enge/base
      - ~CAMAC~
      - ~DAC128V~
      - ~DXP~
-     - ~IP~
      - ~IP330~
      - ~IPUNIDIG~
      - ~OPTICS~
